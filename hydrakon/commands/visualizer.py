@@ -12,9 +12,12 @@ import shutil
 app = typer.Typer(help="Visualize system states.")
 console = Console()
 
-def run_capture(topic: str, duration: float = 2.0) -> str:
+def run_capture(topic: str, duration: float = 2.0, debug: bool = False) -> str:
     """Captures topic output for a specific duration."""
     cmd = ["ros2", "topic", "echo", topic, "--no-arr"]
+    if debug:
+        console.print(f"[dim]Running: {' '.join(cmd)} for {duration}s[/dim]")
+
     try:
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
@@ -26,10 +29,18 @@ def run_capture(topic: str, duration: float = 2.0) -> str:
         except subprocess.TimeoutExpired:
             proc.kill()
             outs, errs = proc.communicate()
+        
+        if debug:
+            console.print(f"[dim]Captured {len(outs)} chars from {topic}. Stderr: {errs.strip()}[/dim]")
+            if len(outs) < 500 and len(outs) > 0:
+                 console.print(f"[dim]Raw content preview:\n{outs}[/dim]")
+        
         return outs
     except FileNotFoundError:
         return ""
     except Exception as e:
+        if debug:
+             console.print(f"[red]Exception in capture: {e}[/red]")
         return ""
 
 def parse_transforms(raw_data: str) -> list[tuple[str, str]]:
@@ -135,6 +146,7 @@ def tfs(
     duration: float = typer.Option(2.0, help="Seconds to listen for transforms"),
     config: Path = typer.Option("hydrakon.yaml", help="Path to configuration file"),
     show_all: bool = typer.Option(False, "--all", help="Show all TFs, ignoring config"),
+    debug: bool = typer.Option(False, "--debug", help="Print debug info"),
 ):
     """
     Captures /tf and /tf_static and displays the TF tree in ASCII.
@@ -158,10 +170,11 @@ def tfs(
         else:
             console.print(f"[yellow]Config '{config}' not found. Showing all.[/yellow]")
 
-    console.print(f"[cyan]Listening for transforms for {duration} seconds...[/cyan]")
-    
-    static_data = run_capture("/tf_static", duration=1.0)
-    dynamic_data = run_capture("/tf", duration=duration)
+    with console.status(f"[cyan]Listening for transforms for {duration}s...[/cyan]"):
+        static_duration = max(2.0, duration) 
+        static_data = run_capture("/tf_static", duration=static_duration, debug=debug)
+        
+        dynamic_data = run_capture("/tf", duration=duration, debug=debug)
     
     connections = []
     connections.extend(parse_transforms(static_data))
@@ -170,5 +183,7 @@ def tfs(
     unique_connections = list(set(connections))
     
     console.print(f"[green]Found {len(unique_connections)} connections.[/green]")
+    if debug:
+        console.print(f"[dim]Unique connections: {unique_connections}[/dim]")
     
     build_ascii_tree(unique_connections, filter_nodes=filter_set)
