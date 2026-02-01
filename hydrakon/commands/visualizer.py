@@ -3,6 +3,7 @@ import subprocess
 import time
 import re
 import yaml
+import os
 from pathlib import Path
 from collections import defaultdict
 from rich.console import Console
@@ -18,9 +19,12 @@ def run_capture(topic: str, duration: float = 2.0, debug: bool = False) -> str:
     if debug:
         console.print(f"[dim]Running: {' '.join(cmd)} for {duration}s[/dim]")
 
+    env = os.environ.copy()
+    env["PYTHONUNBUFFERED"] = "1"
+
     try:
         proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
         )
         time.sleep(duration)
         proc.terminate()
@@ -178,7 +182,7 @@ def build_ascii_tree(connections: list[tuple[str, str]], filter_nodes: set[str] 
 
 @app.command()
 def tfs(
-    duration: float = typer.Option(2.0, help="Seconds to listen for transforms"),
+    duration: float = typer.Option(5.0, help="Seconds to listen for transforms"),
     config: Path = typer.Option("hydrakon.yaml", help="Path to configuration file"),
     show_all: bool = typer.Option(False, "--all", help="Show all TFs, ignoring config"),
     debug: bool = typer.Option(False, "--debug", help="Print debug info"),
