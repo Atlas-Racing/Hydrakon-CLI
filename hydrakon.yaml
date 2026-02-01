@@ -5,3 +5,8 @@ topics:
   - name: /cmd_vel
     hz: 10
     tolerance: 0.2
+
+frames:
+  - name: map
+  - name: odom
+  - name: base_link
