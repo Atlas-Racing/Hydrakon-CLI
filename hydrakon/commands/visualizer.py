@@ -51,27 +51,29 @@ def parse_transforms(raw_data: str) -> list[tuple[str, str]]:
     if not raw_data:
         return connections
 
-    try:
-        docs = yaml.safe_load_all(raw_data)
-        
-        for doc in docs:
+    docs_raw = raw_data.split("---")
+    
+    for doc_str in docs_raw:
+        if not doc_str.strip():
+            continue
+        try:
+            doc = yaml.safe_load(doc_str)
             if not doc or not isinstance(doc, dict):
                 continue
             
             transforms = doc.get("transforms", [])
-            
-            for t in transforms:
-                header = t.get("header", {})
-                parent = header.get("frame_id")
-                child = t.get("child_frame_id")
-                
-                if parent and child:
-                    connections.append((str(parent), str(child)))
-
-    except yaml.YAMLError:
-        pass
-    except Exception:
-        pass
+            if isinstance(transforms, list):
+                for t in transforms:
+                    header = t.get("header", {})
+                    parent = header.get("frame_id")
+                    child = t.get("child_frame_id")
+                    
+                    if parent and child:
+                        connections.append((str(parent), str(child)))
+        except yaml.YAMLError:
+            continue
+        except Exception:
+            continue
                     
     return connections
 
