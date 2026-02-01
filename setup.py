@@ -6,7 +6,8 @@ setup(
     packages=find_packages(),
     install_requires=[
         "typer[all]",
-        "rich"
+        "rich",
+        "PyYAML"
     ],
     entry_points={
         "console_scripts": [

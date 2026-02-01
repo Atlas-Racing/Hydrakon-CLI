@@ -1,0 +1,7 @@
+topics:
+  - name: /rosout
+    type: rcl_interfaces/msg/Log
+    exists: true
+  - name: /cmd_vel
+    hz: 10
+    tolerance: 0.2
