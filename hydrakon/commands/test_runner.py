@@ -28,7 +28,8 @@ def run_command(cmd: list[str], timeout: int = 5) -> str:
 
 @app.command()
 def topics(
-    config: Path = typer.Option("hydrakon.yaml", help="Path to configuration file")
+    config: Path = typer.Option("hydrakon.yaml", help="Path to configuration file"),
+    show_all: bool = typer.Option(False, "--all", help="Show all active topics, not just configured ones"),
 ):
     """Validate ROS 2 topics (Existence, Type, Hz) defined in hydrakon.yaml."""
     if not config.exists():
@@ -66,11 +67,14 @@ def topics(
 
     success_count = 0
     total_checks = 0
+    configured_names = set()
 
     for item in topic_configs:
         name = item.get("name")
         if not name:
             continue
+        
+        configured_names.add(name)
 
         # 1. Check Existence
         total_checks += 1
@@ -125,6 +129,13 @@ def topics(
                 success_count += 1
             
             table.add_row(name, "Hz", f"{target_hz} (±{int(tolerance*100)}%)", f"{actual_hz:.2f}", status_hz)
+
+    if show_all:
+        extras = sorted(list(active_topics - configured_names))
+        if extras:
+            table.add_section()
+            for topic in extras:
+                table.add_row(topic, "Unconfigured", "-", "Present", "[blue]DETECTED[/blue]")
 
     console.print(table)
     
