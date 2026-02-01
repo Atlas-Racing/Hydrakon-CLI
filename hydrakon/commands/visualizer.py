@@ -43,25 +43,35 @@ def run_capture(topic: str, duration: float = 2.0, debug: bool = False) -> str:
              console.print(f"[red]Exception in capture: {e}[/red]")
         return ""
 
-def parse_transforms(raw_data: str) -> list[tuple[str, str]]:
+def parse_transforms(raw_data: str, debug: bool = False) -> list[tuple[str, str]]:
     """
     Parses `ros2 topic echo` output using YAML parser.
     """
     connections = []
     if not raw_data:
+        if debug:
+            console.print("[dim]Parser: raw_data is empty.[/dim]")
         return connections
 
     docs_raw = raw_data.split("---")
     
-    for doc_str in docs_raw:
+    if debug:
+        console.print(f"[dim]Parser: Split data into {len(docs_raw)} chunks.[/dim]")
+    
+    for i, doc_str in enumerate(docs_raw):
         if not doc_str.strip():
             continue
         try:
             doc = yaml.safe_load(doc_str)
             if not doc or not isinstance(doc, dict):
+                if debug and doc_str.strip():
+                     console.print(f"[dim]Parser: Chunk {i} loaded but not a dict. Type: {type(doc)}[/dim]")
                 continue
             
             transforms = doc.get("transforms", [])
+            if not transforms and debug:
+                console.print(f"[dim]Parser: Chunk {i} has no 'transforms'. Keys: {list(doc.keys())}[/dim]")
+            
             if isinstance(transforms, list):
                 for t in transforms:
                     header = t.get("header", {})
@@ -70,9 +80,15 @@ def parse_transforms(raw_data: str) -> list[tuple[str, str]]:
                     
                     if parent and child:
                         connections.append((str(parent), str(child)))
-        except yaml.YAMLError:
+                    elif debug:
+                        console.print(f"[dim]Parser: Found transform but missing parent/child. Parent: {parent}, Child: {child}[/dim]")
+        except yaml.YAMLError as e:
+            if debug:
+                console.print(f"[dim]Parser: YAML error in chunk {i}: {e}[/dim]")
             continue
-        except Exception:
+        except Exception as e:
+            if debug:
+                console.print(f"[dim]Parser: Generic error in chunk {i}: {e}[/dim]")
             continue
                     
     return connections
@@ -188,8 +204,8 @@ def tfs(
         dynamic_data = run_capture("/tf", duration=duration, debug=debug)
     
     connections = []
-    connections.extend(parse_transforms(static_data))
-    connections.extend(parse_transforms(dynamic_data))
+    connections.extend(parse_transforms(static_data, debug=debug))
+    connections.extend(parse_transforms(dynamic_data, debug=debug))
     
     unique_connections = list(set(connections))
     
