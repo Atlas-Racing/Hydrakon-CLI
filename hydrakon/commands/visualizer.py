@@ -14,7 +14,7 @@ console = Console()
 
 def run_capture(topic: str, duration: float = 2.0, debug: bool = False) -> str:
     """Captures topic output for a specific duration."""
-    cmd = ["ros2", "topic", "echo", topic, "--no-arr"]
+    cmd = ["ros2", "topic", "echo", topic]
     if debug:
         console.print(f"[dim]Running: {' '.join(cmd)} for {duration}s[/dim]")
 
