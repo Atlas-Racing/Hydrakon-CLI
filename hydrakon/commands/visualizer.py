@@ -45,24 +45,33 @@ def run_capture(topic: str, duration: float = 2.0, debug: bool = False) -> str:
 
 def parse_transforms(raw_data: str) -> list[tuple[str, str]]:
     """
-    Parses `ros2 topic echo` output to extract (parent, child) tuples.
+    Parses `ros2 topic echo` output using YAML parser.
     """
     connections = []
-    messages = raw_data.split("---")
-    
-    for msg in messages:
-        lines = msg.splitlines()
-        current_parent = None
+    if not raw_data:
+        return connections
+
+    try:
+        docs = yaml.safe_load_all(raw_data)
         
-        for line in lines:
-            line = line.strip()
-            if line.startswith("frame_id:"):
-                current_parent = line.split(":", 1)[1].strip().replace("'", "").replace('"', "")
-            elif line.startswith("child_frame_id:"):
-                if current_parent:
-                    child = line.split(":", 1)[1].strip().replace("'", "").replace('"', "")
-                    connections.append((current_parent, child))
-                    current_parent = None 
+        for doc in docs:
+            if not doc or not isinstance(doc, dict):
+                continue
+            
+            transforms = doc.get("transforms", [])
+            
+            for t in transforms:
+                header = t.get("header", {})
+                parent = header.get("frame_id")
+                child = t.get("child_frame_id")
+                
+                if parent and child:
+                    connections.append((str(parent), str(child)))
+
+    except yaml.YAMLError:
+        pass
+    except Exception:
+        pass
                     
     return connections
 
