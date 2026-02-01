@@ -30,6 +30,10 @@ def run_capture(topic: str, duration: float = 2.0, debug: bool = False) -> str:
             proc.kill()
             outs, errs = proc.communicate()
         
+        # Strip ANSI codes just in case
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        outs = ansi_escape.sub('', outs)
+
         if debug:
             console.print(f"[dim]Captured {len(outs)} chars from {topic}. Stderr: {errs.strip()}[/dim]")
             if len(outs) < 500 and len(outs) > 0:
@@ -61,10 +65,14 @@ def parse_transforms(raw_data: str, debug: bool = False) -> list[tuple[str, str]
     for i, doc_str in enumerate(docs_raw):
         if not doc_str.strip():
             continue
+            
+        if debug and i < 2: # Print preview of first valid chunk
+            console.print(f"[dim]Parser: Chunk {i} preview (first 100 chars): {doc_str.strip()[:100]}[/dim]")
+
         try:
             doc = yaml.safe_load(doc_str)
             if not doc or not isinstance(doc, dict):
-                if debug and doc_str.strip():
+                if debug:
                      console.print(f"[dim]Parser: Chunk {i} loaded but not a dict. Type: {type(doc)}[/dim]")
                 continue
             
