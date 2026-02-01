@@ -5,10 +5,11 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.columns import Columns
 from rich.text import Text
-from hydrakon.commands import test_runner
+from hydrakon.commands import test_runner, visualizer
 
 app = typer.Typer(help="Hydrakon CLI: Test and manage your packages.")
 app.add_typer(test_runner.app, name="test")
+app.add_typer(visualizer.app, name="show")
 console = Console()
 
 NAME_ASCII = r"""
